@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tanishka's Quiz Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: lightblue;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 15px;
+    }
+    h1 {
+      color: darkblue;
+      text-align: center;
+    }
+   .game-box {
+      background: white;
+      padding: 25px;
+      margin: 20px auto;
+      max-width: 95%;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+   .stats {
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+   .question {
+      font-size: 17px;
+      margin: 20px 0;
+      text-align: left;
+      line-height: 1.6;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    input[type="text"] {
+      width: 95%;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+      width: 90%;
+      font-weight: bold;
+    }
+   .hint-btn { background: #ff9800; }
+   .result {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      display: none;
+      text-align: left;
+    }
+   .correct {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+   .wrong {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+    #readyScreen, #gameScreen, #quitScreen, #winScreen {
+      display: none;
+    }
+    #quitScreen, #winScreen {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>WELCOME TO MY QUIZZ 🎯</h1>
+
+  <!-- Screen 1: Do you want to play? -->
+  <div class="game-box" id="startScreen">
+    <div class="question">Do you want to play?</div>
+    <input type="text" id="playInput" placeholder="Type yes or no" autofocus>
+    <br>
+    <button onclick="checkPlay()">Start</button>
+  </div>
+
+  <!-- Screen 2: Are u ready -->
+  <div class="game-box" id="readyScreen">
+    <div class="question">OKAY lets play RIDDLES<br>Are u ready?</div>
+    <input type="text" id="readyInput" placeholder="Type yes or no">
+    <br>
+    <button onclick="checkReady()">Let's Go</button>
+  </div>
+
+  <!-- Screen 3: Game -->
+  <div class="game-box" id="gameScreen">
+    <div class="stats" id="stats"></div>
+    <div class="question" id="riddleQ"></div>
+    <input type="text" id="userAnswer" placeholder="Type your answer here">
+    <br>
+    <button onclick="checkAnswer()">Submit Answer</button>
+    <button class="hint-btn" onclick="showHint()">Show Hint</button>
+    <div class="result" id="result"></div>
+    <div class="result" id="hintBox"></div>
+    <button id="nextBtn" onclick="nextQuestion()" style="display:none; background:#2196F3;">Next Level</button>
+  </div>
+
+  <!-- Quit Screen -->
+  <div class="game-box" id="quitScreen">
+    <h2>Game Over! 💀</h2>
+    <p id="finalScoreQuit"></p>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
+  <!-- Win Screen -->
+  <div class="game-box" id="winScreen">
+    <h2>🎉 CONGRATULATIONS! YOU WON! 🎉</h2>
+    <p id="finalScoreWin"></p>
+    <button onclick="location.reload()">Play Again</button>
+  </div>
+
+  <script>
+    // TERE PYTHON KE 10 QUESTIONS YAHAN DAAL DIYE
+    const riddles = [
+      {q: "1. Who has a neck but no head?", a: "bottle", hint: "You drink water from it 💧"},
+      {q: "2. What can u catch but can't throw?", a: "cold", hint: "Achoo! You get it in winter 🤧"},
+      {q: "3. What is at the end of Rainbow?", a: "w", hint: "Last letter of the word 'Rainbow' 🌈"},
+      {q: "4. Who have 1 eye but can't see?", a: "needle", hint: "Tailors use it 🪡"},
+      {q: "5. What is always front of u but u can't see?", a: "future", hint: "It hasn't happened yet ⏳"},
+      {q: "6. I am a collection, changeable and ordered.\nI can hold different types, not easily bordered.\nI wear square clothes, for you to know I'm ready.\nWho am I?", a: "list", hint: "Python: [1,2,3] 📝"},
+      {q: "7. I wear a coil, but have no spring. I hold many items, but have no pockets. I can't be changed, but often get copied. What am I?", a: "tuple", hint: "Python: (1,2,3) - Immutable 🔒"},
+      {q: "8. I come at the start, but I'm never the beginning. I create the blueprint, but hold no data. I have attributes and methods, but I'm not a person. What am I?", a: "class", hint: "OOP concept - blueprint of object 🏗️"},
+      {q: "9. I manage your scope, but I'm not a watchman. I run code multiple times, but I'm not a loop. I take arguments and return values. What am I?", a: ["function", "method"], hint: "def my_func(): in Python ⚙️"},
+      {q: "10. I look like nothing, and check for the same. I'm not zero, and I'm not false. I'm used for absence of a value. What am I?", a: "none", hint: "Python: None keyword 🚫"}
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+    let lives = 3;
+    let attempts = 0;
+    let hintUsed = false;
+
+    function checkPlay() {
+      const play = document.getElementById("playInput").value.toLowerCase().trim();
+      if (play === "yes") {
+        document.getElementById("startScreen").style.display = "none";
+        document.getElementById("readyScreen").style.display = "block";
+        document.getElementById("readyInput").focus();
+      } else {
+        quitGame();
+      }
+    }
+
+    function checkReady() {
+      const py = document.getElementById("readyInput").value.toLowerCase().trim();
+      if (py === "yes") {
+        document.getElementById("readyScreen").style.display = "none";
+        document.getElementById("gameScreen").style.display = "block";
+        loadQuestion();
+      } else {
+        quitGame();
+      }
+    }
+
+    function updateStats() {
+      const hearts = "❤️".repeat(lives) + "🖤".repeat(3 - lives);
+      document.getElementById("stats").innerHTML =
+        `Level ${currentQ + 1}/${riddles.length} | Score: ${score} | Lives: ${hearts}`;
+    }
+
+    function loadQuestion() {
+      attempts = 0;
+      hintUsed = false;
+      document.getElementById("riddleQ").innerText = riddles[currentQ].q;
+      document.getElementById("userAnswer").value = "";
+      document.getElementById("result").style.display = "none";
+      document.getElementById("hintBox").style.display = "none";
+      document.getElementById("nextBtn").style.display = "none";
+      document.getElementById("userAnswer").focus();
+      updateStats();
+    }
+
+    function checkAnswer() {
+      const userAns = document.getElementById("userAnswer").value.toLowerCase().trim();
+      const resultDiv = document.getElementById("result");
+
+      if (userAns === "") {
+        resultDiv.className = "result wrong";
+        resultDiv.innerText = "Please write an answer first!";
+        return;
+      }
+
+      const correctAns = riddles[currentQ].a;
+      const isCorrect = Array.isArray(correctAns)? correctAns.includes(userAns) : userAns === correctAns;
+
+      if (isCorrect) {
+        const points = hintUsed? 5 : 10;
+        score += points;
+        resultDiv.className = "result correct";
+        resultDiv.innerText = `Correct! +${points} points 🎉`;
+        document.getElementById("nextBtn").style.display = "block";
+        updateStats();
+      } else {
+        attempts++;
+        lives--;
+        updateStats();
+
+        if (lives <= 0) {
+          gameOver();
+        } else {
+          resultDiv.className = "result wrong";
+          resultDiv.innerText = `Wrong! ${lives} lives left. Try again or use hint.`;
+        }
+      }
+    }
+
+    function showHint() {
+      if (!hintUsed) {
+        hintUsed = true;
+        const hintBox = document.getElementById("hintBox");
+        hintBox.className = "result correct";
+        hintBox.innerText = "Hint: " + riddles[currentQ].hint;
+        hintBox.style.background = "#fff3cd";
+        hintBox.style.color = "#856404";
+      }
+    }
+
+    function nextQuestion() {
+      currentQ++;
+      if (currentQ >= riddles.length) {
+        winGame();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    function gameOver() {
+      document.getElementById("gameScreen").style.display = "none";
+      document.getElementById("quitScreen").style.display = "block";
+      document.getElementById("finalScoreQuit").innerText = `Final Score: ${score}/${riddles.length * 10}`;
+    }
+
+    function winGame() {
+      document.getElementById("gameScreen").style.display = "none";
+      document.getElementById("winScreen").style.display = "block";
+      document.getElementById("finalScoreWin").innerText = `Final Score: ${score}/${riddles.length * 10} | Lives: ${"❤️".repeat(lives)}`;
+    }
+
+    function quitGame() {
+      document.getElementById("startScreen").style.display = "none";
+      document.getElementById("readyScreen").style.display = "none";
+      document.getElementById("gameScreen").style.display = "none";
+      document.getElementById("quitScreen").style.display = "block";
+      document.getElementById("finalScoreQuit").innerText = "Maybe next time 😊";
+    }
+
+    document.getElementById("playInput").addEventListener("keypress", e => {
+      if (e.key === "Enter") checkPlay();
+    });
+    document.getElementById("readyInput").addEventListener("keypress", e => {
+      if (e.key === "Enter") checkReady();
+    });
+    document.getElementById("userAnswer").addEventListener("keypress", e => {
+      if (e.key === "Enter") checkAnswer();
+    });
+  </script>
+</body>
+</html>
